@@ -59,7 +59,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # DATABASE (SQLite for Render)
 DATABASES = {
-    'default': dj_database_url.config(default='postgres://agroconnect_db_w1ss_user:qarhuMRTJr9x0AFVqDcovrzHDqFek2YR@dpg-d6o4f8vkijhs73a1ekc0-a:5432/agroconnect_db_w1ss')
+    'default': dj_database_url.config(default=config('DATABASE_URL'))
 }
 
 # PASSWORD VALIDATION

@@ -19,7 +19,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY
-SECRET_KEY = config('SECRET_KEY', default='your-default-secret-key')
+SECRET_KEY = config('SECRET_KEY')
 DEBUG = False
 ALLOWED_HOSTS = ['agroconnect-backend-nos7.onrender.com', 'localhost', '127.0.0.1']
 

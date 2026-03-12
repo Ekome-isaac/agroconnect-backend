@@ -7,7 +7,6 @@ djangorestframework_simplejwt==5.5.1
 drf-yasg==1.21.15
 gunicorn==25.1.0
 inflection==0.5.1
-mysqlclient==2.2.8
 packaging==26.0
 pillow==12.1.1
 PyJWT==2.11.0
@@ -18,4 +17,4 @@ sqlparse==0.5.5
 tzdata==2025.3
 uritemplate==4.2.0
 whitenoise==6.12.0
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.1

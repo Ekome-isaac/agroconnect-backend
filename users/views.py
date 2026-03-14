@@ -82,11 +82,30 @@ class CartListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        total_price = sum(item.crop.price * item.quantity for item in queryset)
+        return Response({
+            'items': serializer.data,
+            'total_price': total_price
+        })    
+
 
 class CartItemDeleteView(generics.DestroyAPIView):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
+
+
+class CartItemUpdateView(generics.UpdateAPIView):
+    queryset = CartItem.objects.all()
+    serializer_class = CartItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # ensure users can only update their own cart items
+        return CartItem.objects.filter(user=self.request.user)
 
 
 # =====================================================
@@ -101,9 +120,10 @@ class CreateOrderView(APIView):
         cart_items = CartItem.objects.filter(user=request.user)
 
         if not cart_items.exists():
-            return Response({"error": "Cart is empty"})
+            return Response({"error": "Cart is empty"}, status=400)
 
         order = Order.objects.create(buyer=request.user)
+        total_price = 0
 
         for item in cart_items:
             OrderItem.objects.create(
@@ -112,12 +132,16 @@ class CreateOrderView(APIView):
                 quantity=item.quantity,
                 price=item.crop.price
             )
+            total_price += item.crop.price * item.quantity
 
         # clear cart after order
         cart_items.delete()
 
         serializer = OrderSerializer(order)
-        return Response(serializer.data)
+        return Response({
+            "order": serializer.data,
+            "total_price": total_price
+        })
 
 
 class OrderListView(generics.ListAPIView):
@@ -165,10 +189,35 @@ class FarmerDashboardView(APIView):
             total=Sum(F('price') * F('quantity'))
         )['total'] or 0
 
+        # recent orders (last 5)
+        recent_orders = orders.order_by('-order__created_at')[:5].values(
+            'order__id',
+            'crop__name', 
+            'quantity', 
+            'price',
+        )
+
+        # top selling crops
+        top_crops = orders.values('crop__name').annotate(
+            'crop_name'
+        ).annotate(
+            total_sold=Sum('quantity')
+        ).order_by('-total_sold')[:5]
+
+
+
+        # total quantity sold
+        total_quantity = orders.aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+
         data = {
             "total_crops": total_crops,
             "total_orders": total_orders,
-            "total_revenue": revenue
+            "total_revenue": revenue,
+            "total_quantity": total_quantity,
+            "recent_orders": list(recent_orders),
+            "top_crops": list(top_crops)
         }
 
         return Response(data)

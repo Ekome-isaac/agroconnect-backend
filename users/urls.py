@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    CartItemUpdateView,
     RegisterView,
     MyTokenObtainPairView,
     CropListCreateView,
@@ -37,4 +38,6 @@ urlpatterns = [
     path('farmer/orders/', FarmerOrdersView.as_view(), name='farmer_orders'),
 
     path('farmer/dashboard/', FarmerDashboardView.as_view(), name='farmer_dashboard'),
+
+    path('cart/<int:pk>/update/', CartItemUpdateView.as_view(), name='cart_item_update'),
 ]

@@ -1,6 +1,6 @@
 # Serializers for User model.
 from rest_framework import serializers
-from .models import User
+from .models import Rating, User
 from django.contrib.auth.password_validation import validate_password
 
 
@@ -31,8 +31,8 @@ from .models import Crop
 class CropSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crop
-        fields = '__all__'  # includes all fields
-        read_only_fields = ['farmer', 'created_at']  # farmer is set automatically
+        fields = 'id', 'farmer', 'name', 'description', 'price', 'quantity', 'category', 'image', 'created_at'  # includes all fields
+        read_only_fields = ['farmer']  # farmer is set automatically
 
 
 
@@ -57,8 +57,9 @@ class CartItemSerializer(serializers.ModelSerializer):
     farmer = serializers.ReadOnlyField(source='crop.farmer.username')
 
     class Meta:
-        model = CartItem
-        fields = ['id', 'crop', 'crop_name', 'crop_price', 'farmer', 'quantity', 'added_at']
+        # model = CartItem
+        # fields = ['id', 'crop', 'crop_name', 'crop_price', 'farmer', 'quantity', 'added_at']
+        unique_together = ('user', 'crop')
 
 
 
@@ -80,3 +81,29 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         return obj.total_price()
+
+
+#serializer for Category model 
+from .models import Category
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name']
+
+
+#
+from .models import Rating 
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = [
+            'id',
+            'farmer',
+            'buyer',
+            'order',
+            'rating',
+            'review',
+            'created_at'
+        ]
+        read_only_fields = ['buyer']

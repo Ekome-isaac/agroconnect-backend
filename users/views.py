@@ -10,7 +10,13 @@ from rest_framework.views import APIView, PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 
-from .models import Crop, CartItem, Order, OrderItem
+from .models import (
+    Crop,
+    CartItem,
+    Order,
+    OrderItem,
+    Category,
+)
 
 from django.db.models import Sum, F
 
@@ -19,7 +25,8 @@ from .serializers import (
     CropSerializer,
     CartItemSerializer,
     OrderSerializer,
-    MyTokenObtainPairSerializer
+    MyTokenObtainPairSerializer,
+    CategorySerializer
 )
 
 # =====================================================
@@ -44,28 +51,48 @@ class CropListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['category']
     search_fields = ['name', 'location']
 
     def get_queryset(self):
         user = self.request.user
+        qs = Crop.objects.all()
+
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
 
         # Farmers see only their crops
         if user.role == "seller":
-            return Crop.objects.filter(farmer=user)
+            qs = qs.filter(farmer=user)
 
         # Buyers see all crops
-        return Crop.objects.all()
+        return qs
 
     def perform_create(self, serializer):
         if self.request.user.role != "seller":
             raise PermissionDenied("Only sellers can create crops")
-        serializer.save(farmer=self.request.user)
+        serializer.save(farmer=self.request.user)  
 
 
 class CropRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Crop.objects.all()
     serializer_class = CropSerializer
     permission_classes = [IsAuthenticated]
+
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, filters
+from .models import Crop
+from .serializers import CropSerializer
+
+class CropListView(generics.ListAPIView):
+    queryset = Crop.objects.all().order_by('-created_at')
+    serializer_class = CropSerializer
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['category', 'price']
+    search_fields = ['name', 'location']
 
 
 # =====================================================
@@ -221,3 +248,32 @@ class FarmerDashboardView(APIView):
         }
 
         return Response(data)
+    
+
+class CategoryListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    queryset = Category.objects.all().order_by('name')
+    serializer_class = CategorySerializer
+
+
+
+from rest_framework import generics
+from .models import Rating
+from .serializers import RatingSerializer
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Avg
+
+class CreateRatingView(generics.CreateAPIView):
+    serializer_class = RatingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(buyer=self.request.user)
+
+    def perform_create(self, serializer):
+        rating = serializer.save(buyer=self.request.user)
+
+        farmer = rating.farmer
+        avg_rating = farmer.ratings_received.aggregate(Avg('rating')) ['rating_avg']
+        farmer.rating = avg_rating or 0
+        farmer.save() 

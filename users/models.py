@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+# 
 class User(AbstractUser): 
     ROLE_CHOICES = (
         ('buyer', 'buyer'),
@@ -8,30 +8,64 @@ class User(AbstractUser):
     )
 
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=20, blank=True)
+    profile_pic = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    farm_name = models.CharField(max_length=100, blank=True)  # For sellers
+    farm_location = models.CharField(max_length=200, blank=True)  # For sellers
+
+    # additional fields for sellers indicating verification status, rating, and total sales
+    is_verified_farmer = models.BooleanField(default=False)  # For sellers, to indicate if they are verified
+    rating = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Average rating for sellers
+    total_sales = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Total sales for sellers
 
     def __str__(self):
         return self.username
     
+    # method to update the average rating of a seller based on new ratings received
+    def update_rating(self):
+        ratings = self.ratings.all()
+        if ratings.exists():
+            self.rating = sum(r.rating for r in ratings) / ratings.count()
+            self.save()
+
     
 # Crop model to store crop details for sellers
 # This model will be linked to the User model through a ForeignKey relationship, allowing us to associate each crop with a specific seller. 
 from django.db import models
 from django.conf import settings
 
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class Crop(models.Model):
+    image = models.ImageField(
+        upload_to='crops/', # Store crop images in the 'crops/' directory within MEDIA_ROOT
+        null=True, 
+        blank=True
+    )
     CROP_TYPES = [
         ('food', 'Food Crop'),
         ('industrial', 'Industrial Crop'),
     ]
+    CATEGORY_CHOICES = [
+        ('Vegetables', 'Vegetables'),
+        ('Fruits', 'Fruits'),
+        ('Grains', 'Grains'),
+        ('Others', 'Others'),
+
+    ]
 
     farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     quantity = models.PositiveIntegerField()
-    unit = models.CharField(max_length=50)  # e.g., kg, bag, bunch
+    unit = models.CharField(max_length=20)  # e.g., kg, bag, bunch
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     image = models.ImageField(upload_to='crops/', null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='crops')  # Link to Category model
 
     crop_type = models.CharField(max_length=20, choices=CROP_TYPES)
     location = models.CharField(max_length=200)
@@ -81,3 +115,17 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.crop.name} - {self.quantity}"
+
+
+# Rating model to allow buyers to rate farmers after an order is completed
+class Rating(models.Model):
+    farmer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='given_ratings')
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)
+    rating = models.FloatField()
+    review = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('farmer', 'buyer', 'order')  # one rating per order
+

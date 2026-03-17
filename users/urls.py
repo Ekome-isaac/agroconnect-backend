@@ -1,4 +1,6 @@
 from django.urls import path
+
+from .views import CreateRatingView
 from .views import (
     CartItemUpdateView,
     RegisterView,
@@ -10,7 +12,8 @@ from .views import (
     CreateOrderView,
     OrderListView,
     FarmerOrdersView,
-    FarmerDashboardView
+    FarmerDashboardView,
+    CategoryListView,
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -40,4 +43,8 @@ urlpatterns = [
     path('farmer/dashboard/', FarmerDashboardView.as_view(), name='farmer_dashboard'),
 
     path('cart/<int:pk>/update/', CartItemUpdateView.as_view(), name='cart_item_update'),
+
+    path('categories/', CategoryListView.as_view(), name='categories'),
+
+    path('rate-farmer/', CreateRatingView.as_view(), name='rate_farmer'),
 ]

@@ -41,31 +41,27 @@ class Category(models.Model):
         return self.name
 
 class Crop(models.Model):
-    image = models.ImageField(
-        upload_to='crops/', # Store crop images in the 'crops/' directory within MEDIA_ROOT
-        null=True, 
-        blank=True
-    )
     CROP_TYPES = [
         ('food', 'Food Crop'),
         ('industrial', 'Industrial Crop'),
     ]
-    CATEGORY_CHOICES = [
-        ('Vegetables', 'Vegetables'),
-        ('Fruits', 'Fruits'),
-        ('Grains', 'Grains'),
-        ('Others', 'Others'),
-
-    ]
 
     farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
     quantity = models.PositiveIntegerField()
-    unit = models.CharField(max_length=20)  # e.g., kg, bag, bunch
+    unit = models.CharField(max_length=20)
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     image = models.ImageField(upload_to='crops/', null=True, blank=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='crops')  # Link to Category model
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='crops'
+    )
 
     crop_type = models.CharField(max_length=20, choices=CROP_TYPES)
     location = models.CharField(max_length=200)
@@ -85,6 +81,9 @@ class CartItem(models.Model):
     def __str__(self):
         return f"{self.user.username} -> {self.crop.name} ({self.quantity})"
     
+    class Meta:
+        unique_together = ('user', 'crop')
+    
 
 
 # Order and OrderItem models to store order details and items in an order
@@ -98,6 +97,7 @@ class Order(models.Model):
 
     buyer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=ORDER_STATUS, default='pending')
+    total_amount = models.DecimalField(max_digits = 10, decimal_places =  2, default = 0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def total_price(self):

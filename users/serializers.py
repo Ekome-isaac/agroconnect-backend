@@ -31,7 +31,7 @@ from .models import Crop
 class CropSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crop
-        fields = 'id', 'farmer', 'name', 'description', 'price', 'quantity', 'category', 'image', 'created_at'  # includes all fields
+        fields = ('id', 'farmer', 'name', 'description', 'price', 'quantity', 'category', 'image', 'created_at')  # includes all fields
         read_only_fields = ['farmer']  # farmer is set automatically
 
 
@@ -57,9 +57,8 @@ class CartItemSerializer(serializers.ModelSerializer):
     farmer = serializers.ReadOnlyField(source='crop.farmer.username')
 
     class Meta:
-        # model = CartItem
-        # fields = ['id', 'crop', 'crop_name', 'crop_price', 'farmer', 'quantity', 'added_at']
-        unique_together = ('user', 'crop')
+        model = CartItem
+        fields = ['id', 'crop', 'crop_name', 'crop_price', 'farmer', 'quantity', 'added_at']
 
 
 
@@ -80,7 +79,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_total_price(self, obj):
-        return obj.total_price()
+        return sum(item.price * item.quantity for item in obj.items.all())
 
 
 #serializer for Category model 

@@ -40,6 +40,8 @@ INSTALLED_APPS = [
 
     # Local apps
     'users.apps.UsersConfig',
+
+    'corsheaders',
 ]
 
 # MIDDLEWARE
@@ -52,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
 ]
 
 # URLS & WSGI
@@ -167,3 +171,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # your email
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # app password or email password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+#allow frontend acess
+CORS_ALLOW_ALL_ORIGINS = True

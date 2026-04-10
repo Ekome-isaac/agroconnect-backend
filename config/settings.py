@@ -86,8 +86,10 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'http://localhost:3000',
+    'https://web-production-68ba7.up.railway.app',
 ]
+
+# CORS_ALLOW_ALL_ORIGINS = True # 🔥 ONLY FOR DEVELOPMENT, REMOVE IN PRODUCTION
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers)

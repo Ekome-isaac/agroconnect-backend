@@ -28,7 +28,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 # ALLOWED_HOSTS = ['agroconnect-backend-nos7.onrender.com', 'localhost', '127.0.0.1']
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS',default='localhost,127.0.0.1,agroconnect-backend-nos7.onrender.com',cast=lambda v:[s.strip() for s in v.split(',')]
+    'ALLOWED_HOSTS',default='localhost,127.0.0.1', cast=lambda v:[s.strip() for s in v.split(',')]
 )                       
 
 SIMPLE_JWT = {
@@ -112,7 +112,8 @@ else :
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
-    }    
+    }   
+
 
 # PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = [
@@ -199,7 +200,7 @@ SWAGGER_SETTINGS = {
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
-FRONTEND_URL = 'http://localhost:5173'
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 
 

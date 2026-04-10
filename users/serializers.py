@@ -31,22 +31,68 @@ from .models import Crop
 class CropSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crop
-        fields = ('id', 'farmer', 'name', 'description', 'price', 'quantity', 'category', 'image', 'created_at')  # includes all fields
-        read_only_fields = ['farmer']  # farmer is set automatically
-
+        fields = [
+            'id',
+            'farmer',
+            'name',
+            'description',
+            'price',
+            'price_type',
+            'quantity',
+            'unit',
+            'category',
+            'crop_type',
+            'image',
+            'created_at',
+            'location',
+        ]
+        read_only_fields = ['farmer']
 
 
 # Serializer for JWT token to include user role and username in the token response
+
+# from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+# from django.contrib.auth import authenticate
+
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from rest_framework import serializers
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
+    username_field = 'email'
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        user = authenticate(
+            request=self.context.get('request'),
+            username=email,   # 🔥 MUST BE username
+            password=password
+        )
+
+        if not user:
+            raise serializers.ValidationError({
+                "non_field_errors": ["Invalid email or password"]
+            })
+
+        if not user.is_active:
+            raise serializers.ValidationError({
+                "non_field_errors": ["User account is disabled"]
+            })
+
         token = super().get_token(user)
-        # Include additional user information in the token response
-        token['username'] = user.username
-        return token
-    
+
+        return {
+            "refresh": str(token),
+            "access": str(token.access_token),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+            }
+        }
+
 
 # Serializer for CartItem model
 from .models import CartItem
@@ -66,12 +112,14 @@ class CartItemSerializer(serializers.ModelSerializer):
 from .models import Order, OrderItem
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    crop_name = serializers.ReadOnlyField(source='crop.name')
     class Meta:
         model = OrderItem
-        fields = '__all__'
+        fields = ['id', 'crop', 'crop_name', 'quantity', 'price']
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
     total_price = serializers.SerializerMethodField()
 
     class Meta:
@@ -106,3 +154,48 @@ class RatingSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['buyer']
+
+# Serializers for Conversation and Message models
+
+from rest_framework import serializers
+from .models import Conversation, Message
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source="sender.username", read_only=True)
+
+    class Meta:
+        model = Message
+        fields = "__all__"
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    messages = MessageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Conversation
+        fields = "__all__"
+
+
+# Serializers for Conversation and Message models
+from rest_framework import serializers
+from .models import Conversation, Message
+
+class MessageSerializer(serializers.ModelSerializer):
+    is_me = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Message
+        fields = ["id", "text", "created_at", "is_me"]
+
+    def get_is_me(self, obj):
+        request = self.context.get("request")
+        return obj.sender == request.user if request else False
+
+# Serializer for Conversation model that includes nested messages
+class ConversationSerializer(serializers.ModelSerializer):
+    messages = MessageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Conversation
+        fields = "__all__"

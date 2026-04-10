@@ -14,6 +14,10 @@ from pathlib import Path
 from decouple import config
 import dj_database_url
 import os
+from datetime import timedelta
+from corsheaders.defaults import default_headers
+
+from config.config import settings
 
 # BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,8 +25,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = True
-ALLOWED_HOSTS = ['agroconnect-backend-nos7.onrender.com', 'localhost', '127.0.0.1']
+DEBUG = config('DEBUG', default=False, cast=bool)
+# ALLOWED_HOSTS = ['agroconnect-backend-nos7.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',default='localhost,127.0.0.1,agroconnect-backend-nos7.onrender.com',cast=lambda v:[s.strip() for s in v.split(',')]
+)                       
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'https://agroconnect-frontend.onrender.com'
+]
 
 # APPLICATIONS
 INSTALLED_APPS = [
@@ -35,28 +53,45 @@ INSTALLED_APPS = [
 
     # Third-party
     'rest_framework',
+    'rest_framework_simplejwt',
     'django_filters',
     'drf_yasg',
+    'corsheaders',
 
     # Local apps
     'users.apps.UsersConfig',
-
-    'corsheaders',
 ]
 
 # MIDDLEWARE
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # MUST BE FIRST
+
     'django.middleware.security.SecurityMiddleware',
+    
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
+
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
+
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = list(default_headers)
+
 
 # URLS & WSGI
 ROOT_URLCONF = 'config.urls'
@@ -105,22 +140,27 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # AUTH
 AUTH_USER_MODEL = 'users.User'
 
 # REST FRAMEWORK
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    ],
+
+    # 🔥 IMPORTANT: Remove global IsAuthenticated
+    # This was silently blocking some endpoints
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
 
     'EXCEPTION_HANDLER': 'users.utils.custom_exception_handler',
 }
@@ -159,18 +199,33 @@ SWAGGER_SETTINGS = {
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = 'http://localhost:5173'
 
 
 
 # Email configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use SMTP in production
-EMAIL_HOST = 'smtp.gmail.com'  # Example: Gmail SMTP
+from decouple import config
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # your email
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # app password or email password
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-#allow frontend acess
-CORS_ALLOW_ALL_ORIGINS = True
+EMAIL_HOST_USER = "apikey"
+EMAIL_HOST_PASSWORD = config("SENDGRID_API_KEY")
+
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+
+# 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}

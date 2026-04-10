@@ -38,3 +38,19 @@ def update_farmer_rating(sender, instance, created, **kwargs):
     if created:
         farmer = instance.farmer
         farmer.update_rating() 
+
+# Signal to create a Transaction record every time an Order is created
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Order, Transaction
+
+
+@receiver(post_save, sender=Order)
+def create_transaction(sender, instance, created, **kwargs):
+    if created:
+        Transaction.objects.create(
+            buyer=instance.buyer,
+            seller=instance.crop.seller,
+            order=instance,
+            amount=instance.total_price,
+        )

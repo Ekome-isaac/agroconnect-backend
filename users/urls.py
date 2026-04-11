@@ -1,5 +1,8 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.views import (
+    TokenRefreshView,
+    TokenObtainPairView,
+)
 from .views import CreateStripeCheckoutSession, get_messages
 from . import views
 
@@ -121,5 +124,8 @@ urlpatterns = [
     path("chat/messages/<int:conversation_id>/", get_messages, name='get_messages'),
 
     path("chat/unread-count/", unread_messages_count, name='unread_messages_count'),
+
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
 ]
